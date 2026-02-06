@@ -1,7 +1,15 @@
+# follow instructions from https://doc.rust-lang.org/cargo/reference/publishing.html
+
 [package]
 name = "monarch"
 version = "0.1.0"
 edition = "2021"
+license = "MIT OR Apache-2.0"
+description = "Implementation of a single writer multiple readers cell of memory for non atomic types"
+homepage = "https://github.com/andreacasalino/monarch/blob/master/ReadMe.md"
+repository = "https://github.com/andreacasalino/monarch"
+readme = "ReadMe.md"
+keywords = ["cell", "single writer", "multiple readers"]
 
 [lib]
 name = "monarch"
