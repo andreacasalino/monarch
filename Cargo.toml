@@ -7,6 +7,14 @@ edition = "2021"
 name = "monarch"
 path = "./lib/lib.rs"
 
+[[bin]]
+name = "set_get_sample"
+path = "./examples/set_get_sample.rs"
+
+[[bin]]
+name = "async_sample"
+path = "./examples/async_sample.rs"
+
 [dependencies]
 async-stream = "0.3.6"
 futures = "0.3.31"

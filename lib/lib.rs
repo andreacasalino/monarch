@@ -1,3 +1,3 @@
-mod spin_lock;
-mod cell;
-mod async_cell;
+pub mod spin_lock;
+pub mod cell;
+pub mod async_cell;

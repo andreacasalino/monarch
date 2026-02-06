@@ -4,7 +4,7 @@ use std::sync::atomic::AtomicU64;
 use std::sync::Arc;
 use std::cell::UnsafeCell;
 
-pub(crate) struct CellContent<T: Clone> {
+pub struct CellContent<T: Clone> {
     pub version: AtomicU64,
     pub lock: SpinLock,
     pub value: UnsafeCell<Option<T>>

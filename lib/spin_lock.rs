@@ -1,6 +1,6 @@
 use std::sync::atomic::AtomicBool;
 
-pub(crate) struct SpinLock {
+pub struct SpinLock {
     flag: AtomicBool
 }
 
@@ -18,7 +18,7 @@ impl SpinLock {
     }
 }
 
-pub(crate) struct SpinLockGuard<'a> {
+pub struct SpinLockGuard<'a> {
     lock: &'a SpinLock
 }
 
