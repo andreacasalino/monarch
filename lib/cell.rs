@@ -52,19 +52,19 @@ impl<T: Default + Clone> CellReader<T> {
         }
     }
 
-    fn update_local(&mut self) {
-        let _ = self.content.lock.make_guard();
-        unsafe {
-            let ptr = self.content.value.get().as_mut().unwrap();
-            self.local_value.clone_from(ptr);
-        }
-        self.local_version = self.content.version.load(std::sync::atomic::Ordering::SeqCst);
+    pub fn was_remote_updated(&self) -> bool {
+        let current_version = self.content.version.load(std::sync::atomic::Ordering::Acquire);
+        self.local_version < current_version
     }
 
     pub fn get(&'_ mut self)-> &'_ T {
-        let current_version = self.content.version.load(std::sync::atomic::Ordering::Acquire);
-        if self.local_version < current_version  {
-            self.update_local();
+        if self.was_remote_updated() {
+            let _ = self.content.lock.make_guard();
+            unsafe {
+                let ptr = self.content.value.get().as_mut().unwrap();
+                self.local_value.clone_from(ptr);
+            }
+            self.local_version = self.content.version.load(std::sync::atomic::Ordering::SeqCst);
         }
         &self.local_value
     }
