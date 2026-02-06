@@ -4,22 +4,22 @@ use std::sync::atomic::AtomicU64;
 use std::sync::Arc;
 use std::cell::UnsafeCell;
 
-pub(crate) struct CellContent<T: Default + Clone> {
+pub(crate) struct CellContent<T: Clone> {
     pub version: AtomicU64,
     pub lock: SpinLock,
-    pub value: UnsafeCell<T>
+    pub value: UnsafeCell<Option<T>>
 }
 
-pub struct Cell<T: Default + Clone> {
+pub struct Cell<T: Clone> {
     content: Arc<CellContent<T>>
 }
 
-impl<T:Default + Clone> Cell<T> {
+impl<T: Clone> Cell<T> {
     pub fn new() -> Self {
         Self{content: Arc::new(CellContent{
-            version: AtomicU64::new(1),
+            version: AtomicU64::new(0),
             lock: SpinLock::new(),
-            value: UnsafeCell::new(Default::default()),
+            value: UnsafeCell::new(None),
         })}
     }
 
@@ -27,28 +27,28 @@ impl<T:Default + Clone> Cell<T> {
         let _ = self.content.lock.make_guard();
         unsafe {
             let ptr = self.content.value.get().as_mut().unwrap();
-            *ptr = value;
+            *ptr = Some(value);
         }
         self.content.version.fetch_add(1, std::sync::atomic::Ordering::Release);
     }
 }
 
-unsafe impl<T: Default + Clone> Send for Cell<T> {}
-unsafe impl<T: Default + Clone> Sync for Cell<T> {}
+unsafe impl<T: Clone> Send for Cell<T> {}
+unsafe impl<T: Clone> Sync for Cell<T> {}
 
 #[derive(Clone)]
-pub struct CellReader<T: Default + Clone> {
+pub struct CellReader<T: Clone> {
     content: Arc<CellContent<T>>,
     local_version: u64,
-    local_value: T
+    local_value: Option<T>
 }
 
-impl<T: Default + Clone> CellReader<T> {
+impl<T: Clone> CellReader<T> {
     pub fn new(content: Arc<CellContent<T>>) -> Self {
         Self { 
             content,
             local_version: 0,
-            local_value: Default::default()
+            local_value: None
         }
     }
 
@@ -57,7 +57,7 @@ impl<T: Default + Clone> CellReader<T> {
         self.local_version < current_version
     }
 
-    pub fn get(&'_ mut self)-> &'_ T {
+    pub fn get(&'_ mut self)-> Option<&'_ T> {
         if self.was_remote_updated() {
             let _ = self.content.lock.make_guard();
             unsafe {
@@ -66,22 +66,29 @@ impl<T: Default + Clone> CellReader<T> {
             }
             self.local_version = self.content.version.load(std::sync::atomic::Ordering::SeqCst);
         }
-        &self.local_value
+        self.local_value.as_ref()
     }
 }
 
-impl<T: Default + Clone> Cell<T> {
+impl<T: Clone> Cell<T> {
     pub fn make_reader(&self) -> CellReader<T> {
         CellReader::new(self.content.clone())
     }
 }
 
-unsafe impl<T: Default + Clone> Send for CellReader<T> {}
-unsafe impl<T: Default + Clone> Sync for CellReader<T> {}
+unsafe impl<T: Clone> Send for CellReader<T> {}
+unsafe impl<T: Clone> Sync for CellReader<T> {}
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn default_is_none_test() {
+        let writer: Cell<String> = Cell::new();
+        let mut reader = writer.make_reader();
+        assert!(reader.get().is_none());
+    }
 
     #[test]
     fn get_set_cell_test() {
@@ -90,12 +97,12 @@ mod tests {
 
         let val = "some value".to_owned();
         writer.set(val.clone());
-        let val_back = reader.get();
+        let val_back = reader.get().unwrap().clone();
         assert_eq!(val, *val_back);
 
         let val = "some other value".to_owned();
         writer.set(val.clone());
-        let val_back = reader.get();
+        let val_back = reader.get().unwrap().clone();
         assert_eq!(val, *val_back);
     }
 
@@ -131,7 +138,7 @@ mod tests {
             let mut values = Values::new();
             started_barrier.fetch_sub(1, std::sync::atomic::Ordering::Acquire);
             loop {
-                values.push(reader.get().clone());
+                values.push(reader.get().unwrap().clone());
                 if completed_barrier.load(std::sync::atomic::Ordering::Acquire) {
                     break;
                 }
@@ -144,6 +151,7 @@ mod tests {
     #[test]
     fn concurrent_get_set_cell_test() {
         let mut writer: Cell<String> = Cell::new();
+        writer.set("value-0".to_owned());
         let started_barrier: Arc<AtomicU8> = Arc::new(AtomicU8::new(2));
         let completed_barrier: Arc<AtomicBool> = Arc::new(AtomicBool::new(false));
 

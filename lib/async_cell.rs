@@ -2,16 +2,22 @@ use crate::cell::CellReader;
 
 use futures::Future;
 
-pub struct CellReaderNextValue<'a, T: Default + Clone> {
+pub struct CellReaderNextValue<'a, T: Clone> {
     reader: &'a mut CellReader<T>
 }
 
-impl<'a, T: Default + Clone> Future for CellReaderNextValue<'a, T> {
+impl<'a, T: Clone> Future for CellReaderNextValue<'a, T> {
     type Output = T;
 
     fn poll(mut self: std::pin::Pin<&mut Self>, cx: &mut std::task::Context<'_>) -> std::task::Poll<Self::Output> {
         if self.reader.was_remote_updated() {
-            std::task::Poll::Ready(self.reader.get().clone())
+            if let Some(next_val_ref) = self.reader.get() {
+                std::task::Poll::Ready(next_val_ref.clone())
+            }
+            else {
+                cx.waker().wake_by_ref();
+                std::task::Poll::Pending
+            }
         }
         else {
             cx.waker().wake_by_ref();
@@ -20,7 +26,7 @@ impl<'a, T: Default + Clone> Future for CellReaderNextValue<'a, T> {
     }
 }
 
-impl<T: Default + Clone> CellReader<T> {
+impl<T: Clone> CellReader<T> {
     pub fn next_value(&'_ mut self) -> CellReaderNextValue<'_, T> {
         CellReaderNextValue{reader: self}
     }
@@ -36,7 +42,6 @@ mod tests {
     async fn await_next_val_test() {
         let mut writer: Cell<String> = Cell::new();
         let mut reader = writer.make_reader();
-        reader.get(); // otherwise the reader would see the fist default value later
 
         let value = "some value".to_owned();
         let value_clone = value.clone();
