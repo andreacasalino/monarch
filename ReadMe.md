@@ -6,6 +6,11 @@ Each time the **monarch** write something into the **Cell**, a version number is
 
 Clearly, it does not make any sense to use a **Cell** to guard a value that can be embedded into an **Atomic**. **Cell** is meant for those type that don't fit **Atomic**, but are the same type cheap enough to be copied.
 
+This package is published on [**cargo.io**](https://crates.io/crates/monarch-cell) meaning that to include it to your project it you can simply run:
+```
+cargo add monarch-cell
+```
+
 #EXAMPLES
 
 Create the cell and one (or multiple) readers:
