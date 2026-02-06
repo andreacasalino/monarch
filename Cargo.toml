@@ -8,6 +8,7 @@ name = "monarch"
 path = "./lib/lib.rs"
 
 [dependencies]
+async-stream = "0.3.6"
 futures = "0.3.31"
 
 [dev-dependencies]

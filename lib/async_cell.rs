@@ -1,6 +1,7 @@
 use crate::cell::CellReader;
 
-use futures::Future;
+use futures::{Future, Stream, StreamExt};
+use std::pin::Pin;
 
 pub struct CellReaderNextValue<'a, T: Clone> {
     reader: &'a mut CellReader<T>
@@ -32,9 +33,22 @@ impl<T: Clone> CellReader<T> {
     }
 }
 
+impl<T: 'static + Clone + Send> CellReader<T> {
+    // TODO clarify some intermediate update could be missing ...
+    pub fn into_update_stream(mut self) -> Pin<Box<dyn Stream<Item = T> + Send>> {
+        async_stream::stream! {
+            loop {
+                yield self.next_value().await;
+            }
+        }.boxed()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use std::time::Duration;
+
+    use futures::StreamExt;
 
     use crate::cell::Cell;
 
@@ -51,11 +65,37 @@ mod tests {
                 tokio::time::sleep(Duration::from_millis(500)).await;
                 writer.set(value_clone);
             },
-            async {
-                reader.next_value().await
-            }
+            reader.next_value()
         );
 
         assert_eq!(value, value_back);
+    }
+
+    #[tokio::test]
+    async fn update_stream_test() {
+        let mut writer: Cell<String> = Cell::new();
+        let mut reader = writer.make_reader().into_update_stream();
+
+        let values_expected: Vec<String> = (0..50).map(|index| format!("value-{}", index)).collect(); 
+        let values_expected_clone = values_expected.clone();
+        let len = values_expected.len();
+
+        let (_, values_back) = tokio::join!(
+            async {
+                for value in values_expected_clone {
+                    writer.set(value);
+                    tokio::time::sleep(Duration::from_millis(20)).await;
+                }
+            },
+            async {
+                let mut res: Vec<String> = Vec::new();
+                while res.len() < len {
+                    res.push(reader.next().await.unwrap());
+                }
+                res
+            }
+        );
+
+        assert_eq!(values_expected, values_back);
     }
 }
