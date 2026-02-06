@@ -1,7 +1,7 @@
 # follow instructions from https://doc.rust-lang.org/cargo/reference/publishing.html
 
 [package]
-name = "monarch"
+name = "monarch-cell"
 version = "0.1.0"
 edition = "2021"
 license = "MIT OR Apache-2.0"
