@@ -11,6 +11,10 @@ repository = "https://github.com/andreacasalino/monarch"
 readme = "ReadMe.md"
 keywords = ["cell", "single writer", "multiple readers"]
 
+exclude = [
+    "Dockerfile"
+]
+
 [lib]
 name = "monarch"
 path = "./lib/lib.rs"
