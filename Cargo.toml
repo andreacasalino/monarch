@@ -9,7 +9,7 @@ description = "Implementation of a single writer multiple readers cell of memory
 homepage = "https://github.com/andreacasalino/monarch/blob/master/ReadMe.md"
 repository = "https://github.com/andreacasalino/monarch"
 readme = "ReadMe.md"
-keywords = ["cell", "single writer", "multiple readers"]
+keywords = ["cell", "single-writer", "multiple-readers"]
 
 exclude = [
     "Dockerfile"
