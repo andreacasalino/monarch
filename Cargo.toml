@@ -2,7 +2,7 @@
 
 [package]
 name = "monarch-cell"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 license = "MIT OR Apache-2.0"
 description = "Implementation of a single writer multiple readers cell of memory for non atomic types"
